@@ -1881,7 +1881,7 @@ def render_project_tracker():
                     if clicked_label:
                         st.session_state["selected_activity"] = clicked_label
 
-            st.markdown("<div class='supporting-text'>If clicking the chart doesn't respond on your Streamlit/Plotly version, pick the activity here instead:</div>", unsafe_allow_html=True)
+            st.markdown("<div class='supporting-text'>Select activity here :</div>", unsafe_allow_html=True)
             activity_options = ["-- Select an activity --"] + df_proj['Activity'].tolist()
             manual_pick = st.selectbox("Drill into activity", activity_options, key="manual_activity_picker", label_visibility="collapsed")
             if manual_pick != "-- Select an activity --":
@@ -1961,8 +1961,8 @@ def render_project_tracker():
     st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
 
     # ---------- 4. EDITABLE Details Table ----------
-    st.markdown(f"<div class='section-title'>Detailed Activity Status (editable)</div>", unsafe_allow_html=True)
-    st.markdown("<div class='supporting-text' style='margin-top:-8px; margin-bottom:14px;'>Update Progress directly in the table - Status recalculates automatically on next data refresh.</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='section-title'>Detailed Activity Status</div>", unsafe_allow_html=True)
+    #st.markdown("<div class='supporting-text' style='margin-top:-8px; margin-bottom:14px;'>Update Progress directly in the table - Status recalculates automatically on next data refresh.</div>", unsafe_allow_html=True)
 
     df_display = df_proj.copy()
 
