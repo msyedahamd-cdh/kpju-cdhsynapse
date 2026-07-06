@@ -2863,7 +2863,7 @@ def show():
             render_digital_health_projects()
             return
 
-        if page == "KPJHS AI and Digital Health Research":
+        if page == "CDH AI Academy AI & Digital Health Training Porgrammes 2026":
             render_research_placeholder()
             return
 
