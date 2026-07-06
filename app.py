@@ -2651,7 +2651,7 @@ def render_research_kpi_scorecards(df):
     achieved_rate = (achieved / total_programmes * 100) if total_programmes else 0
 
     st.markdown(f"<div class='section-title'>KPJHS Research KPI Summary</div>", unsafe_allow_html=True)
-    k1, k2, k3, k4 = st.columns(5)
+    k1, k2, k3, k4 = st.columns(4)
     with k1:
         st.markdown(f"""<div class="exec-kpi-card">
             <div class="exec-kpi-label">Total Programmes</div>
