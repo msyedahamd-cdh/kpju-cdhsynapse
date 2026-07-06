@@ -2647,7 +2647,7 @@ def render_research_kpi_scorecards(df):
     achieved = int(status_counts.get("Achieved", 0))
     in_progress = int(status_counts.get("In Progress", 0))
     planned = int(status_counts.get("Planned", 0))
-    ##not_achieved = int(status_counts.get("Not Achieved", 0))
+    not_achieved = int(status_counts.get("Not Achieved", 0))
     achieved_rate = (achieved / total_programmes * 100) if total_programmes else 0
 
     st.markdown(f"<div class='section-title'>KPJHS Research KPI Summary</div>", unsafe_allow_html=True)
