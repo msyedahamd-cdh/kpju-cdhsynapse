@@ -2647,7 +2647,7 @@ def render_research_kpi_scorecards(df):
     achieved = int(status_counts.get("Achieved", 0))
     in_progress = int(status_counts.get("In Progress", 0))
     planned = int(status_counts.get("Planned", 0))
-    not_achieved = int(status_counts.get("Not Achieved", 0))
+    ##not_achieved = int(status_counts.get("Not Achieved", 0))
     achieved_rate = (achieved / total_programmes * 100) if total_programmes else 0
 
     st.markdown(f"<div class='section-title'>KPJHS Research KPI Summary</div>", unsafe_allow_html=True)
@@ -2678,7 +2678,7 @@ def render_research_kpi_scorecards(df):
         </div>""", unsafe_allow_html=True)
     with k5:
         st.markdown(f"""<div class="exec-kpi-card">
-            <div class="exec-kpi-label">Not Achieved</div>
+          ##  <div class="exec-kpi-label">Not Achieved</div>
             <div class="exec-kpi-value">{not_achieved}</div>
             <div class="exec-kpi-sub">Requires attention</div>
         </div>""", unsafe_allow_html=True)
@@ -2724,7 +2724,7 @@ def render_research_programmes_table(df):
                 'achieved': { bg: '#E7F4EA', fg: '#2F6B3A', bd: '#B9DEC1' },
                 'in progress': { bg: '#FFF4CC', fg: '#8A6500', bd: '#E7CC72' },
                 'planned': { bg: '#E7F0FA', fg: '#275F91', bd: '#B8D3EB' },
-                'not achieved': { bg: '#FCE8E6', fg: '#9A3B30', bd: '#E7B8B0' }
+              ##  'not achieved': { bg: '#FCE8E6', fg: '#9A3B30', bd: '#E7B8B0' }
             };
             const c = colors[key] || { bg: '#EEEAE3', fg: '#5D5348', bd: '#D8D0C5' };
             const badge = document.createElement('span');
@@ -2779,7 +2779,7 @@ def render_research_programmes_table(df):
                 "Achieved": ("#E7F4EA", "#2F6B3A", "#B9DEC1"),
                 "In Progress": ("#FFF4CC", "#8A6500", "#E7CC72"),
                 "Planned": ("#E7F0FA", "#275F91", "#B8D3EB"),
-                "Not Achieved": ("#FCE8E6", "#9A3B30", "#E7B8B0"),
+              ##  "Not Achieved": ("#FCE8E6", "#9A3B30", "#E7B8B0"),
             }
             bg, fg, border = colors.get(str(value), ("#EEEAE3", COLOR_TEXT, "#D8D0C5"))
             return (
