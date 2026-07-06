@@ -2791,7 +2791,7 @@ def render_research_programmes_table(df):
         st.dataframe(styled_table, use_container_width=True, hide_index=True, height=_research_table_height(len(table_df)))
 
 def render_research_placeholder():
-    st.markdown(f"<div class='page-title'>KPJHS AI and Digital Health Research</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='page-title'>CDH AI Academy AI & Digital Health Training Porgrammes 2026</div>", unsafe_allow_html=True)
     df = get_research_programmes_data()
     if df.empty:
         st.markdown(
@@ -2825,7 +2825,7 @@ def show():
             # "Regional Coverage Analysis",      # Temporarily disabled.
             "CDH AI and Digital Health Project Portfolio",
             "CDH Establishment Progress",
-            "KPJHS AI and Digital Health Research",
+            "CDH AI Academy AI & Digital Health Training Porgrammes 2026",
             "Specialist Search"
         ], label_visibility="collapsed")
         st.markdown("---")
