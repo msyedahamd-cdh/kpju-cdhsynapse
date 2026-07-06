@@ -1,15 +1,3 @@
-﻿#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 import streamlit as st
 import pandas as pd
 import base64
@@ -23,17 +11,14 @@ import re
 import io
 import os
 
-# Try to use rapidfuzz if available lah
+# Optional fuzzy matching support
 try:
     from rapidfuzz import fuzz
     _HAS_RAPIDFUZZ = True
 except Exception:
     _HAS_RAPIDFUZZ = False
 
-# Try to use AG Grid for the Digital Health Projects portfolio table.
-# Falls back to a styled st.dataframe (with the same search/sort/filter/
-# pagination/export behaviour) if streamlit-aggrid isn't installed, so
-# this module never breaks an environment where the package is missing.
+# Optional AG Grid support with Streamlit fallback.
 try:
     from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode, JsCode
     _HAS_AGGRID = True
@@ -51,10 +36,10 @@ DATA_BASENAME  = "subspecialityprediction"
 GEO_FILENAME   = "kpj_geo"
 PROJECT_FILENAME = "milestone"
 FUZZY_THRESHOLD = 65
-DIGITAL_HEALTH_FILENAME = "cdhprojects"  # PART 3 dataset basename
+DIGITAL_HEALTH_FILENAME = "cdhprojects"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ================= SESSION STATE INITIALISATION (NEW - PART 1) =================
+# ================= SESSION STATE INITIALISATION =================
 # Initialised once at startup so show() and the sidebar can safely read
 # these keys on the very first page load, before any login attempt.
 if "logged_in" not in st.session_state:
@@ -74,7 +59,7 @@ COLOR_TITLE   = "#6D6256"
 COLOR_HOVER   = "#595046"   
 COLOR_TEXT    = "#5D5348"   
 COLOR_CARD    = "#FFFFFF"
-COLOR_SECONDARY = "#013D54"  # requested secondary brand colour, used in Strategic Project Portfolio's and Digital Health Projects' charts
+COLOR_SECONDARY = "#013D54"
 
 
 # ================= LOGIC: FELLOWSHIP RULES =================
@@ -94,44 +79,11 @@ FELLOWSHIP_RULES = {
     "Paediatric & ACHD": ["paediatric", "congenital", "child", "infant", "tetralogy", "asd", "vsd", "blue baby", "achd", "adult congenital"]
 }
 
-# =====================================================================
-# ============== GEOSPATIAL SECTION - REFINED (this part only) ========
-# =====================================================================
-#
-# WHAT CHANGED HERE AND WHY:
-# 1. Hospital and region coordinates are no longer hardcoded in Python.
-#    They are now read from kpj_geo.csv (columns: Hospital_Name, Latitude,
-#    Longitude, Region) via load_geo_lookup(), which is cached so the file
-#    is only read once per session. Adding/editing a hospital now just
-#    means editing the CSV - no code changes needed.
-# 2. Region centroids are computed automatically as the mean lat/lng of all
-#    hospitals belonging to that region in the CSV - not hardcoded either.
-# 3. enrich_data_with_coords no longer uses `i * 0.01` (row index) for jitter.
-#    That produced a fake diagonal line of points near KL for every
-#    unmatched record, which LOOKED like real hospitals clustered there but
-#    wasn't. Jitter is now small and random, only meant to stop markers
-#    from sitting exactly on top of each other - not to disguise missing data.
-# 4. A Location_Confidence column ("Exact" / "Estimated (Region)" /
-#    "Unknown (Defaulted)") still tags how each point's coordinate was
-#    derived, so the map and table stay honest about precision.
-# 5. render_geospatial uses px.scatter_map (px.scatter_mapbox is deprecated),
-#    has a legend, and a second tab with a rule-based "AI Coverage Gap
-#    Analysis" view that reuses get_hospital_saturation(), broken down per
-#    region.
-# =====================================================================
+# ================= GEOSPATIAL LOOKUP =================
 
 @st.cache_data
 def load_geo_lookup():
-    """
-    Reads kpj_geo.csv (Hospital_Name, Latitude, Longitude, Region) and builds:
-      - hospital_coords: {hospital_name_lower: [lat, lng]}
-      - region_coords: {region_name: [lat, lng]} computed as the mean
-        coordinate of all hospitals in that region found in the CSV.
-    Returns (hospital_coords, region_coords, file_found: bool).
-    If the CSV is missing or malformed, returns empty dicts and False so
-    the caller can decide how to handle it (e.g. warn the user) instead of
-    silently falling back to made-up coordinates.
-    """
+    """Load hospital and region coordinates from kpj_geo.csv."""
     try:
         geo_df = pd.read_csv(f"{GEO_FILENAME}.csv", sep=None, engine="python")
         geo_df.columns = [c.strip().lower() for c in geo_df.columns]
@@ -202,7 +154,7 @@ def enrich_data_with_coords(df):
             hosp_name = str(row.get("Hospital", "")).strip().lower()
             region_name = str(row.get("Region", "")).strip()
 
-            # 1. Exact (case-insensitive) hospital name match - highest confidence
+            # Exact hospital match
             if hosp_name in hospital_coords:
                 coords = hospital_coords[hosp_name]
                 jitter = rng.uniform(-0.003, 0.003, size=2)
@@ -211,7 +163,7 @@ def enrich_data_with_coords(df):
                 df.at[i, "Location_Confidence"] = "Exact"
                 match_found = True
 
-            # 2. Partial hospital name match (substring) - still hospital-level
+            # Partial hospital match
             if not match_found:
                 for key, coords in hospital_coords.items():
                     if key in hosp_name or hosp_name in key:
@@ -222,7 +174,7 @@ def enrich_data_with_coords(df):
                         match_found = True
                         break
 
-            # 3. Region centroid fallback (computed from CSV, not hardcoded) - explicitly marked as estimated
+            # Region centroid fallback
             if not match_found and region_name in region_coords:
                 coords = region_coords[region_name]
                 jitter = rng.uniform(-0.05, 0.05, size=2)
@@ -231,7 +183,7 @@ def enrich_data_with_coords(df):
                 df.at[i, "Location_Confidence"] = "Estimated (Region)"
                 match_found = True
 
-            # 4. Last resort - unknown location, default to first available region centroid but flag clearly
+            # Last-resort fallback
             if not match_found:
                 jitter = rng.uniform(-0.05, 0.05, size=2)
                 df.at[i, "Latitude"] = fallback_region_coords[0] + jitter[0]
@@ -365,9 +317,7 @@ def load_project_data():
       - Status    = COMPUTED from the date range, since milestone.xlsx has
                     no real status column: "Not Started" if today is before
                     Start_Date, "Completed" if today is after End_Date,
-                    otherwise "In Progress". This was an explicit choice
-                    confirmed with the user rather than inventing a fake
-                    status column.
+                    otherwise "In Progress".
       - Progress  = percentage of the project's Start-to-End span elapsed
                     as of today, capped at 100% and floored at 0% (same
                     calculation already used elsewhere in this app).
@@ -443,40 +393,10 @@ def inject_custom_css():
         .stApp {{ background-color: {COLOR_BG}; font-family: 'Open Sans', 'Segoe UI', sans-serif; color: {COLOR_TEXT}; }}
         [data-testid="stSidebar"] {{ background-color: {COLOR_SIDEBAR}; border-right: 1px solid #DCD5CD; }}
 
-        /* Box-sizing reset: without this, padding and border are added ON
-           TOP OF an element's declared width (the browser's content-box
-           default) rather than being included within it - which is what
-           was making custom HTML cards like .ai-box render wider than
-           their Streamlit container and visibly overflow past the
-           Executive Workspace's right edge. border-box is the standard
-           fix and only changes how padding/border are measured, not any
-           spacing, colour, or radius value. */
+        /* Keep custom HTML cards within their Streamlit containers. */
         *, *::before, *::after {{ box-sizing: border-box; }}
 
-        /* ===== EXECUTIVE WORKSPACE LAYOUT =====
-           The KPJ logo header sits OUTSIDE the white card, directly on the
-           beige page background, as a plain bar with NO box/card styling
-           of its own (no background, no border, no border-radius, no
-           shadow - see .kpj-header-bar below). The white rounded "card"
-           starts at each module's page title and wraps everything below
-           it (subtitle, filters, executive summary, KPIs, charts, maps,
-           tables) through to the end of that module's content - it does
-           NOT wrap the header.
-
-           #workspace-card-anchor (outer st.container(), see show()) is
-           PURELY a layout wrapper - max-width + centering + padding - with
-           no background/border/shadow of its own, so it doesn't paint a
-           second box behind the header.
-
-           #page-content-card-anchor (a second, nested st.container(), see
-           show()) is the sole home for the white card look, applied to
-           everything from the page title downward, for every module since
-           this container wraps the shared page-routing block in show().
-           Both use the same proven :has(#anchor) pattern already used
-           reliably elsewhere in this file (KPI treemap card, DHP timeline
-           card) rather than trying to style Streamlit's own
-           .block-container from outside, which proved unreliable across
-           Streamlit versions. */
+        /* Shared authenticated workspace layout. */
         div[data-testid="stVerticalBlockBorderWrapper"]:has(#workspace-card-anchor) {{
             max-width: 1280px !important;
             margin: 0 auto !important;
@@ -490,17 +410,9 @@ def inject_custom_css():
             padding: 28px 32px 32px 32px !important;
         }}
 
-        /* Every authenticated module uses the same white content container.
-           The container begins at the module title and wraps the full page
-           body. The global KPJ header remains outside this container. */
+        /* Shared white content container for authenticated pages. */
 
-        /* HEADER BAR - NO BOX: the header carries no card treatment at
-           all (no background colour, no border, no border-radius, no
-           shadow) - it sits directly on the beige page background, same
-           as the page title below it. Only layout properties (flex
-           alignment, spacing, the accent divider between logo and text)
-           remain. This markup is rendered once in show() before page
-           routing, so removing the box here applies to every module. */
+        /* Global header bar. */
         .kpj-header-bar {{ padding: 4px 0 18px 0; margin-bottom: 4px; display: flex; align-items: center; gap: 20px; }}
         .kpj-logo {{ height: 60px; width: auto; }}
         .kpj-header-text-block {{ border-left: 2px solid {COLOR_PRIMARY}; padding-left: 20px; }}
@@ -510,12 +422,7 @@ def inject_custom_css():
         .stTextInput input {{ background-color: #FFFFFF !important; color: #5D5348 !important; border: 1px solid #D0C9C0 !important; border-radius: 8px !important; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }}
         div[data-testid="stForm"] {{ border: none; padding: 0; }}
 
-        /* ===== UNIFIED INPUT SYSTEM (NEW) =====
-           Standardizes dropdowns/selectboxes, tabs, and radio buttons to the
-           same border radius, border colour, and background already used by
-           the text input above, so every input control across the platform
-           reads as one family. Purely cosmetic - no widget keys, values,
-           options, or behaviour are changed. */
+        /* Shared input styling. */
         div[data-baseweb="select"] > div {{
             background-color: #FFFFFF !important;
             border: 1px solid #D0C9C0 !important;
@@ -669,7 +576,7 @@ def inject_custom_css():
         .ai-title {{ color: {COLOR_TITLE}; font-weight: 800; font-size: 1.2rem; margin-bottom: 10px; }}
         @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
 
-        /* ===== STRATEGIC INSIGHTS - EXECUTIVE CARDS (NEW) ===== */
+        /* ===== STRATEGIC INSIGHTS - EXECUTIVE CARDS ===== */
         .insight-section-title {{
             color: {COLOR_TITLE};
             font-size: 1.15rem;
@@ -776,27 +683,7 @@ def inject_custom_css():
         }}
         .exec-action-text b {{ color: {COLOR_TITLE}; font-weight: 700; }}
 
-        /* ===== ENTERPRISE TYPOGRAPHY HIERARCHY =====
-           Spacing rhythm standardized platform-wide per the Executive
-           Design System scale: Header -> Title 32px, Title -> Subtitle
-           16px, Subtitle -> next content 20px, Section -> Section 32px,
-           Card internal padding 24px (see .exec-kpi-card / .exec-content-
-           card / .exec-card below). Same classes, same usage on every
-           page - only the margin values changed to follow one scale.
-
-           FIX (applies to every page, not just one): the intended 32px
-           "Header -> Title" gap was being counted TWICE - once here as
-           page-title's own top margin, and again automatically by
-           Streamlit, which adds its own vertical gap between separate
-           st.markdown() calls (the header bar and the page-title div are
-           always two separate calls). That stacking is what produced the
-           oversized empty space above every page's title (Digital Health
-           Projects, Workforce Intelligence Overview, Regional Coverage
-           Analysis, Strategic Project Portfolio, Specialist Directory -
-           all of them, since all share this same .page-title class).
-           Removing the top margin here leaves Streamlit's own
-           inter-element gap plus .kpj-header-bar's existing
-           margin-bottom to provide the spacing once, not twice. */
+        /* Enterprise typography and spacing rhythm. */
         .page-title {{
             color: {COLOR_TITLE};
             font-size: 1.55rem;
@@ -915,7 +802,7 @@ def inject_custom_css():
         }}
         .assessment-value b {{ color: {COLOR_TITLE}; font-weight: 700; }}
 
-        /* ===== AUTHENTICATION / LOGIN SCREEN (NEW - PART 1) ===== */
+        /* ===== AUTHENTICATION / LOGIN SCREEN ===== */
         .login-logo-row {{ display: flex; justify-content: center; margin-bottom: 18px; }}
         .login-logo-row img {{ height: 56px; width: auto; }}
         .login-org-name {{
@@ -954,9 +841,7 @@ def inject_custom_css():
             text-transform: uppercase; letter-spacing: 0.6px;
         }}
 
-        /* ===== DIGITAL HEALTH PROJECTS — EXECUTIVE REDESIGN (this page only) =====
-           Additive only: no existing class above is modified. Scoped entirely to
-           the dhp-exec-* namespace so nothing else in the app can be affected. */
+        /* ===== DIGITAL HEALTH PROJECTS ===== */
         .dhp-exec-page {{ padding-bottom: 4px; }}
 
         .dhp-exec-kpi-row {{ display: flex; gap: 14px; margin-bottom: 18px; }}
@@ -1042,15 +927,7 @@ def inject_custom_css():
         .dhp-exec-insight-body {{ color: {COLOR_TEXT}; line-height: 1.7; font-size: 0.92rem; }}
         .dhp-exec-insight-body b {{ color: {COLOR_TITLE}; }}
 
-        /* ===== PLATFORM-WIDE EXECUTIVE DESIGN LANGUAGE (NEW) =====
-           Additive only - every class below is new. Nothing above is
-           renamed, removed, or overridden. These generalise the KPI-card,
-           filter-bar, and legend treatment already used on Digital Health
-           Projects (.dhp-exec-kpi-card, .dhp-exec-filter-bar, .dhp-exec-
-           legend) into page-agnostic classes so Workforce Intelligence
-           Overview, Regional Coverage Analysis, Strategic Project
-           Portfolio, and Specialist Search can visually match it without
-           touching any calculation, filter, or data-loading logic. */
+        /* ===== SHARED EXECUTIVE COMPONENTS ===== */
 
         .exec-kpi-card {{
             background: #FAF9F7;
@@ -1079,26 +956,7 @@ def inject_custom_css():
             box-shadow: 0 2px 8px rgba(1, 61, 84, 0.04);
         }}
 
-        /* Wraps a real st.container() the same way #dhp-timeline-card-anchor
-           does, via the :has() anchor pattern, for any other page that needs
-           a genuinely nested bordered card rather than disconnected
-           st.markdown() siblings.
-
-           NOTE: unlike the dhp-timeline-card-anchor and exec-filter-anchor
-           rules above, this selector intentionally does NOT include the
-           generic `div[data-testid="stVerticalBlock"]:has(> div #anchor)`
-           fallback. When a card like this sits inside st.tabs() (as the
-           Regional Coverage Analysis Map Card does), that generic fallback
-           also matches the tab panel's own ambient block - which also
-           qualifies as a stVerticalBlock ancestor of the anchor - painting
-           the card's background/border/shadow a second time around the
-           whole tab content as well as the actual container. The result
-           was two concentric rounded boxes instead of one. Scoping to only
-           stVerticalBlockBorderWrapper (the element Streamlit creates
-           specifically for st.container(), which a bare tab panel never
-           gets) paints exactly one card, matching the Digital Health
-           Projects reference, which never sits inside a tab and so never
-           hit this collision. */
+        /* Card anchor styles for nested Streamlit containers. */
         div[data-testid="stVerticalBlockBorderWrapper"]:has(#exec-card-anchor) {{
             background: transparent !important;
             border-radius: 0 !important;
@@ -1106,13 +964,7 @@ def inject_custom_css():
             box-shadow: none !important;
             padding: 0 !important;
         }}
-        /* NOTE: scoped to stVerticalBlockBorderWrapper only - no generic
-           stVerticalBlock fallback - for the same reason as exec-card-anchor
-           above: once st.columns()/st.form() are nested inside this
-           st.container(), the looser fallback also matches an inner
-           ancestor wrapper of the anchor and paints the card a second
-           time, producing two concentric boxes around the search bar
-           instead of one. */
+        /* Prevent duplicate card shells around nested filter containers. */
         div[data-testid="stVerticalBlockBorderWrapper"]:has(#exec-filter-anchor) {{
             background: transparent !important;
             border-radius: 0 !important;
@@ -1123,26 +975,7 @@ def inject_custom_css():
     </style>
     """, unsafe_allow_html=True)
 
-# =====================================================================
-# ============== AUTHENTICATION MODULE (NEW - PART 1) =================
-# =====================================================================
-#
-# DESIGN NOTES:
-# 1. AUTH_USER_DIRECTORY is the only place that knows about credentials.
-#    It is intentionally isolated behind authenticate_user() so this whole
-#    block can later be swapped for an LDAP / Microsoft Active Directory
-#    bind without touching render_login_page(), the sidebar, or any page
-#    logic. authenticate_user() is the single integration seam: replace
-#    its body with an ldap3 bind or an MSAL/AAD token check and keep the
-#    same (success: bool, role: str | None) return contract.
-# 2. Session state holds exactly three auth-related keys:
-#       st.session_state.logged_in  (bool)
-#       st.session_state.username   (str)
-#       st.session_state.role       (str)  - reserved for future RBAC
-# 3. render_login_page() reuses the same card/typography classes already
-#    defined in inject_custom_css() so it doesn't look like a bolted-on
-#    third-party screen.
-# =====================================================================
+# ================= AUTHENTICATION =================
 
 AUTH_USER_DIRECTORY = {
     "admin":      {"password": "admin123",    "role": "Administrator"},
@@ -1150,13 +983,7 @@ AUTH_USER_DIRECTORY = {
     "viewer":     {"password": "viewer123",   "role": "Viewer"},
 }
 
-# PROTOTYPE_MODE: while True, authenticate_user() accepts ANY non-empty
-# username/password combination - no credential checking at all. This is
-# intended for demos only. Set to False to enforce AUTH_USER_DIRECTORY
-# (the admin/researcher/viewer accounts), and later swap the body of
-# authenticate_user() for an LDAP/AAD call as described below - flipping
-# this flag and that swap are the only two changes needed to go from
-# prototype to a real authentication flow.
+# Demo mode accepts any non-empty username and password.
 PROTOTYPE_MODE = True
 
 def authenticate_user(username: str, password: str):
@@ -1203,21 +1030,7 @@ def authenticate_user(username: str, password: str):
     return False, None
 
 def render_login_page():
-    """
-    Renders the KPJ Healthcare University / CDH Synapse login screen.
-    Reuses the existing logo and KPJ colour palette so it reads as part
-    of the same application rather than a separate auth tool.
-
-    The card boundary uses st.container(border=True) rather than manually
-    opened/closed <div> tags spread across several st.markdown() calls.
-    Streamlit renders each st.markdown() call as its own sibling block, so
-    splitting one HTML element's open tag and close tag across separate
-    calls does not actually nest the content between them - it produces
-    an empty painted shell (the stray white box) with the real content
-    floating outside it. The header (logo/title/subtitle/error) is built
-    as a single combined HTML string in one call so it always renders as
-    one coherent block; the bordered container handles the card shell.
-    """
+    """Render the KPJ Healthcare University / CDH Synapse login screen."""
     _, mid, _ = st.columns([1, 1.1, 1])
     with mid:
         with st.container(border=True):
@@ -1256,11 +1069,7 @@ def render_login_page():
             st.markdown("<div class='login-footer-text'>Restricted to Authorised Personnel</div>", unsafe_allow_html=True)
 
 def render_logout_sidebar():
-    """
-    Renders the signed-in-user summary and Logout button in the sidebar.
-    Called from show() after the existing Navigation block so it does not
-    disturb the existing sidebar layout or radio menu.
-    """
+    """Render the signed-in user summary and logout button."""
     username = st.session_state.get("username", "")
     role = st.session_state.get("role", "")
     st.markdown(
@@ -1356,7 +1165,7 @@ def load_data():
     df = enrich_data_with_coords(df)
     return df
 
-# ================= STRATEGIC INSIGHTS (NEW) =================
+# ================= STRATEGIC INSIGHTS =================
 def compute_strategic_insights(df):
     """
     Translates raw saturation, pipeline, and regional coverage data into
@@ -1524,13 +1333,7 @@ def render_dashboard(df):
     pending = total_docs - sub_assigned
     coverage_ratio = int((sub_assigned / total_docs) * 100) if total_docs > 0 else 0
 
-    # ---------- EXECUTIVE SUMMARY LINE ----------
-    # Matches the same one-line summary pattern used directly above the KPI
-    # row on Digital Health Projects (dhp-exec-summary), which Workforce
-    # Intelligence Overview was missing - the page jumped straight from
-    # subtitle to KPI cards, skipping a step in the shared Page Title ->
-    # Subtitle -> Executive Summary -> KPIs hierarchy. Reuses the same
-    # totals already computed above; no new calculation introduced.
+    # Executive summary line.
     st.markdown(
         f"<div class='dhp-exec-summary'><b>{total_docs} Specialists</b> "
         f"across all regions. <b>{sub_assigned} are sub-specialized</b>, "
@@ -1621,17 +1424,7 @@ def render_dashboard(df):
 
 # ================= PAGE: PROJECT MONITORING (EXECUTIVE VIEW) =================
 def generate_ai_summary(df_proj, df_proj_full):
-    """
-    Rule-based, deterministic executive summary for the CDH Project
-    Monitoring page's "AI Project Status Summary" panel - no external
-    AI/LLM call, consistent with every other "AI"-labelled feature in
-    this app (compute_strategic_insights, generate_strategic_assessment,
-    generate_digital_health_portfolio_insight). Operates on whatever
-    df_proj the page currently has filtered (Milestone/PIC/Status
-    sidebar filters), so the summary always reflects exactly what's on
-    screen, while df_proj_full (the unfiltered set) is used only to
-    report the PIC with the most activities overall.
-    """
+    """Generate a deterministic executive summary for the filtered project view."""
     total = len(df_proj)
     if total == 0:
         return "No activities match the current filter selection."
@@ -1687,16 +1480,7 @@ def generate_ai_summary(df_proj, df_proj_full):
 
 
 def render_project_tracker():
-    """
-    CDH Project Monitoring - restored to match the original page structure
-    (filters, KPI row, AI summary, Gantt timeline with drill-down,
-    completion-rate chart, editable table, distribution pie chart), now
-    rebuilt against milestone.xlsx's REAL columns via load_project_data():
-    Activity (from Milestones), Category (from Project Targets), PIC,
-    Start/End (parsed from "Q2 '25" style text), and Status/Progress
-    computed from those dates. See load_project_data()'s docstring for
-    the full column-mapping rationale agreed with the user.
-    """
+    """Render the CDH Establishment Progress page."""
     st.markdown(f"<div class='page-title'>CDH Establishment Progress</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='page-subtitle'>CDH Programme Governance and Delivery Tracking</div>", unsafe_allow_html=True)
     executive_summary_slot = st.empty()
@@ -1744,10 +1528,7 @@ def render_project_tracker():
     avg_prog = df_proj['Progress'].mean() if total_acts else 0
     curr_q = f"Q{(pd.Timestamp.now().month-1)//3+1} '{pd.Timestamp.now().year-2000}"
 
-    # ---------- EXECUTIVE SUMMARY LINE ----------
-    # Same one-line, plain-language summary pattern used directly above the
-    # KPI row on Digital Health Projects (dhp-exec-summary), matching the
-    # shared Page Title -> Subtitle -> Executive Summary -> KPIs hierarchy.
+    # Executive summary line.
     executive_summary_slot.markdown(
         f"<div class='dhp-exec-summary'><b>{total_acts} Key Activities</b> "
         f"tracked for {curr_q}. <b>{active} activities</b> are currently in progress, "
@@ -1881,7 +1662,7 @@ def render_project_tracker():
                     if clicked_label:
                         st.session_state["selected_activity"] = clicked_label
 
-            st.markdown("<div class='supporting-text'>Select activity here :</div>", unsafe_allow_html=True)
+            #st.markdown("<div class='supporting-text'>If clicking the chart doesn't respond on your Streamlit/Plotly version, pick the activity here instead:</div>", unsafe_allow_html=True)
             activity_options = ["-- Select an activity --"] + df_proj['Activity'].tolist()
             manual_pick = st.selectbox("Drill into activity", activity_options, key="manual_activity_picker", label_visibility="collapsed")
             if manual_pick != "-- Select an activity --":
@@ -2087,13 +1868,7 @@ def render_geospatial(df):
     st.markdown(f"<div class='page-title'>Regional Coverage Analysis</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='page-subtitle'>Specialist Distribution and Regional Risk Assessment</div>", unsafe_allow_html=True)
 
-    # ---------- EXECUTIVE SUMMARY LINE ----------
-    # Same one-line, plain-language summary pattern used directly above the
-    # KPI/content area on Workforce Intelligence Overview, Strategic Project
-    # Portfolio and Digital Health Projects (dhp-exec-summary), matching the
-    # shared Page Title -> Subtitle -> Executive Summary -> content
-    # hierarchy. Uses only simple counts already available on df - no new
-    # calculation logic introduced.
+    # Executive summary line.
     total_specialists = len(df)
     total_regions = df["Region"].dropna().nunique()
     st.markdown(
@@ -2263,31 +2038,8 @@ def render_geospatial(df):
 
 
 
-# =====================================================================
-# ============== DIGITAL HEALTH PROJECTS MODULE (FIXED) ===============
-# =====================================================================
-#
-# BUG FIXED: DIGITAL_HEALTH_FILENAME pointed at "cdhprojects" but the
-# loader underneath still expected the OLD CDH_Dashboard_Structure.csv
-# schema (project_name, category, year, quarter, milestone, version,
-# project_status) - columns that don't exist in cdhprojects.xlsx. The
-# real file has only 5 columns: ProjectName, Category, Status, Start,
-# End (same shape Strategic Project Portfolio reads from milestone.xlsx).
-# This module is rebuilt with its own loader matched to that real shape.
-#
-# IMPORTANT: this module is completely independent of
-# load_project_data()/render_project_tracker() above - it has its own
-# cached loader (load_digital_health_projects_data), its own session
-# state keys ('dhp_' prefix), and its own render function. Strategic
-# Project Portfolio (milestone.xlsx) is untouched by anything below.
-#
-# Even though both pages currently read from quarter-year-style Start/End
-# text, this page is intentionally NOT a duplicate of Strategic Project
-# Portfolio: it offers a Category/Status distribution view and a Gantt
-# timeline (deliberately omitted from Strategic Project Portfolio per
-# the "too crowded" feedback), plus a project detail drill-down - a
-# distinct analytical angle on the same underlying data file.
-# =====================================================================
+# ================= DIGITAL HEALTH PROJECTS MODULE =================
+# Portfolio loader and page state are scoped to the dhp_* namespace.
 
 _DHP_QUARTER_MONTH_START = {1: 1, 2: 4, 3: 7, 4: 10}
 _DHP_QUARTER_MONTH_END   = {1: 3, 2: 6, 3: 9, 4: 12}
@@ -2492,18 +2244,7 @@ def render_digital_health_progress_table(df_filtered):
         )
 
 def generate_digital_health_portfolio_insight(df_filtered):
-    """
-    Rule-based, deterministic executive summary for the "Generate Portfolio
-    Insight" button - no external AI/LLM call, consistent with how every
-    other "AI"-labelled feature in this app works (compute_strategic_insights,
-    generate_strategic_assessment). Operates on whatever df_filtered the
-    page currently has applied (sidebar Category/Status/Project filters),
-    so the insight always reflects exactly what's on screen.
-
-    Covers: portfolio health framing, active vs. planning split, the
-    category with the highest concentration of projects, and any
-    project(s) approaching the midpoint of their delivery timeline.
-    """
+    """Generate a deterministic portfolio summary for the filtered project set."""
     def _pluralize(n, noun):
         return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
 
@@ -2561,12 +2302,7 @@ def generate_digital_health_portfolio_insight(df_filtered):
     return " ".join(parts)
 
 def render_digital_health_sidebar_filters():
-    """
-    Sidebar filters scoped only to Digital Health Projects. Stored under
-    'dhp_' prefixed session_state keys so they never collide with
-    'filter_region' (Workforce Intelligence Overview) or any Strategic
-    Project Portfolio state.
-    """
+    """Render sidebar filters for the Digital Health Projects page."""
     st.markdown("---")
     st.markdown(f"<div style='color:{COLOR_TITLE}; font-weight:bold; margin-bottom:5px; text-transform:uppercase; font-size:0.78rem; letter-spacing:0.5px;'>Filter Scope</div>", unsafe_allow_html=True)
 
@@ -2589,38 +2325,7 @@ def render_digital_health_sidebar_filters():
         st.rerun()
 
 def render_digital_health_projects():
-    """
-    Digital Health Projects — Executive Strategic Portfolio view.
-
-    Single-screen, no-scroll dashboard for the President of KPJ Healthcare.
-    Answers five questions at a glance: how many projects, how many are
-    active, overall portfolio progress, what's in the pipeline, and the
-    delivery timeline. One visualization only - a horizontal progress
-    timeline (track = full Start-to-End span, filled segment = progress
-    to date) - plus a four-card KPI row. No pie chart, no donut, no
-    category bar chart, no detail table.
-
-    AVERAGE PROGRESS — verified, not assumed: this is intentionally the
-    blended progress across the WHOLE portfolio (including projects still
-    in planning at 0%), not just active projects. Portfolio-wide
-    completion is the standard board-reporting convention for a capital
-    programme: it answers "how far along is everything we've committed
-    to," not "how far along is the subset that has already started."
-    Excluding planning-phase projects would make portfolio health look
-    better than it is. Kept as-is per the brief's own instruction to
-    preserve the current calculation if it is already correct.
-
-    SCOPE NOTE: only this render function and its dedicated dhp-exec-*
-    CSS changed. load_digital_health_projects_data() and
-    apply_digital_health_project_filters() are reused exactly as they
-    were; render_digital_health_sidebar_filters() and the
-    'dhp_category' / 'dhp_status' / 'dhp_project_name' session-state keys
-    it populates are untouched, so the existing sidebar filters (Category,
-    Status, Project Name, Reset Filters) keep working without modification.
-    The previous "Active Projects" KPI was a clickable button; it is now a
-    plain card identical to the other three, per the explicit instruction
-    that all four KPI cards must share identical styling.
-    """
+    """Render the Digital Health Projects portfolio page."""
     st.markdown("<div class='dhp-exec-page'>", unsafe_allow_html=True)
     st.markdown(f"<div class='page-title'>CDH AI and Digital Health Project Portfolio</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='page-subtitle'>Executive Strategic Portfolio Overview</div>", unsafe_allow_html=True)
@@ -2690,13 +2395,7 @@ def render_digital_health_projects():
             <div class="dhp-exec-kpi-sub">In the pipeline</div>
         </div>""", unsafe_allow_html=True)
 
-    # ---------- THE TIMELINE (single visual, ~75% of page weight) ----------
-    # Deliberately not a Gantt chart: no per-resource rows, no milestone
-    # grouping, no Gantt-style legend chrome. Each project gets one row
-    # with two overlaid bars - a faded full Start-to-End "track" and a
-    # solid "progress" fill - so position-in-time and percent-complete
-    # are both visible in a single glance, which a traditional Gantt
-    # does not show directly.
+    # Project delivery timeline.
     status_colors = {
         "In Planning": "#9CA3AF",     # Light Grey
         "In Discussion": "#8C7C68",   # Warm neutral
@@ -2715,13 +2414,7 @@ def render_digital_health_projects():
         for label, color in legend_items
     )
 
-    # The whole section (header + button + chart) lives inside ONE real
-    # st.container() so it renders as a single nested block - this is the
-    # fix for the previous "empty white container" bug, which was caused by
-    # opening and closing a <div> across separate st.markdown() calls (see
-    # the CSS comment above .dhp-exec-timeline-header for the full
-    # explanation). The hidden anchor span lets the CSS :has() selector
-    # apply the card's background / radius / shadow to this exact container.
+    # Anchor the timeline card to a real Streamlit container.
     with st.container():
         st.markdown("<span id='dhp-timeline-card-anchor'></span>", unsafe_allow_html=True)
 
@@ -2751,11 +2444,7 @@ def render_digital_health_projects():
 
         bar_colors = [status_colors.get(s, "#9CA3AF") for s in timeline_df['Status']]
 
-        # Highlight: when a single project is selected via the sidebar's
-        # Project Name filter, df_filtered already contains only that
-        # project, so the bar naturally stands alone at full opacity - no
-        # extra highlight logic is needed to satisfy "selecting Project
-        # highlights the selected project."
+        # Selected project naturally renders as the only row.
 
         fig = go.Figure()
         # Faded track: full planned Start -> End span
@@ -2794,14 +2483,7 @@ def render_digital_health_projects():
 
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
-        # ---- AI Portfolio Insight: generated only on demand, never shown
-        # permanently. Uses an expander as the "clean expandable card" the
-        # brief asks for - it auto-opens the first time it has content so
-        # the click feels responsive, and can be collapsed afterwards.
-        # The cached insight is keyed to the current filter combination so
-        # changing Category / Status / Project Name automatically clears
-        # any previously generated text rather than leaving it on screen
-        # describing a different data subset. ----
+        # Generate portfolio insight on demand.
         current_filter_signature = (category, status, project_name_filter)
         if st.session_state.get("dhp_insight_filter_signature") != current_filter_signature:
             st.session_state.pop("dhp_insight_text", None)
@@ -3128,17 +2810,12 @@ def render_research_placeholder():
 def show():
     inject_custom_css()
 
-    # ---- PART 1: Authentication gate ----
-    # Everything below only runs once st.session_state.logged_in is True.
-    # An unauthenticated user sees render_login_page() and nothing else -
-    # no sidebar, no existing pages, no data loading.
+    # Authentication gate.
     if not st.session_state.get("logged_in", False):
         render_login_page()
         return
 
-    # Marker class kept for backward compatibility with any other rule
-    # still referencing it, though the workspace card below no longer
-    # depends on it (see FIX note above render_login_page's CSS block).
+    # Backward-compatible authenticated marker.
     st.markdown("<div class='app-authenticated'></div>", unsafe_allow_html=True)
 
     with st.sidebar:
@@ -3168,35 +2845,20 @@ def show():
         if page == "CDH AI and Digital Health Project Portfolio":
             render_digital_health_sidebar_filters()
 
-        # ---- PART 1: Logout control (added below all existing sidebar content) ----
+        # Logout control.
         st.markdown("---")
         render_logout_sidebar()
 
-    # ---- HEADER: rendered directly on the beige application background,
-    # with NO st.container() wrapping it - it is a plain top-level element,
-    # a true sibling of the content container below, not nested inside it
-    # or inside any other wrapper. This satisfies "the header must stay
-    # outside" the content container. .kpj-header-bar itself carries no
-    # box/card styling (see inject_custom_css) so it simply sits on the
-    # page background.
+    # Global application header.
     logo_header_html = f'<img src="data:image/png;base64,{LOGO_IMG_B64}" class="kpj-logo">' if LOGO_IMG_B64 else ""
     st.markdown(f"""<div class="kpj-header-bar">{logo_header_html}<div class="kpj-header-text-block"><div class="kpj-header-title">CDH Synapse</div><div class="kpj-header-subtitle">Executive Workforce Intelligence Platform</div></div></div>""", unsafe_allow_html=True)
 
-    # ---- CONTENT: exactly ONE container, starting at the module's page
-    # title and wrapping everything through the end of that module's
-    # content (subtitle, executive summary, filters, KPI cards, charts,
-    # tables, maps, AI section). No container wraps the header, and no
-    # container is nested inside another container at this level - this
-    # is the single "white card" container for the whole page body.
-    # Every module uses the same page-content-card-anchor, so the module
-    # title begins the one white rounded content container consistently.
+    # Shared content container.
     with st.container():
         st.markdown("<span id='page-content-card-anchor'></span>", unsafe_allow_html=True)
         render_hero_banner()
 
-        # ---- PART 2/3: Digital Health Projects is fully independent of the
-        # existing specialist DataFrame, so it is routed before the load_data()
-        # call below and returns immediately - it never touches `df`.
+        # Route pages that do not require the specialist dataset first.
         if page == "CDH AI and Digital Health Project Portfolio":
             render_digital_health_projects()
             return
@@ -3219,10 +2881,5 @@ def show():
 
 if __name__ == "__main__":
     show()
-
-
-
-
-
 
 
