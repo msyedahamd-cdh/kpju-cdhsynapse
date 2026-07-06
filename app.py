@@ -2647,11 +2647,11 @@ def render_research_kpi_scorecards(df):
     achieved = int(status_counts.get("Achieved", 0))
     in_progress = int(status_counts.get("In Progress", 0))
     planned = int(status_counts.get("Planned", 0))
-    not_achieved = int(status_counts.get("Not Achieved", 0))
+   ## not_achieved = int(status_counts.get("Not Achieved", 0))
     achieved_rate = (achieved / total_programmes * 100) if total_programmes else 0
 
     st.markdown(f"<div class='section-title'>KPJHS Research KPI Summary</div>", unsafe_allow_html=True)
-    k1, k2, k3, k4, k5 = st.columns(5)
+    k1, k2, k3, k4 = st.columns(5)
     with k1:
         st.markdown(f"""<div class="exec-kpi-card">
             <div class="exec-kpi-label">Total Programmes</div>
@@ -2676,12 +2676,12 @@ def render_research_kpi_scorecards(df):
             <div class="exec-kpi-value">{planned}</div>
             <div class="exec-kpi-sub">Upcoming programmes</div>
         </div>""", unsafe_allow_html=True)
-    with k5:
-        st.markdown(f"""<div class="exec-kpi-card">
+  ##  with k5:
+    ##    st.markdown(f"""<div class="exec-kpi-card">
           ##  <div class="exec-kpi-label">Not Achieved</div>
-            <div class="exec-kpi-value">{not_achieved}</div>
-            <div class="exec-kpi-sub">Requires attention</div>
-        </div>""", unsafe_allow_html=True)
+      ##      <div class="exec-kpi-value">{not_achieved}</div>
+        ##    <div class="exec-kpi-sub">Requires attention</div>
+        ##</div>""", unsafe_allow_html=True)
 
 def render_research_programmes_table(df):
     st.markdown(f"<div class='section-title'>KPJHS AI and Digital Health Research Programme List</div>", unsafe_allow_html=True)
