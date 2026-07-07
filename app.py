@@ -11,7 +11,7 @@ import re
 import io
 import os
 
-# fuzzy matching support
+# Optional fuzzy matching support
 try:
     from rapidfuzz import fuzz
     _HAS_RAPIDFUZZ = True
@@ -27,7 +27,7 @@ except Exception:
 
 # ================= CONFIGURATION =================
 st.set_page_config(
-    page_title="CDH Synapse | KPJ University",
+    page_title="CDH NEXUS Clinical OmniSuite | KPJ University",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -1030,7 +1030,7 @@ def authenticate_user(username: str, password: str):
     return False, None
 
 def render_login_page():
-    """Render the KPJ Healthcare University / CDH Synapse login screen."""
+    """Render the KPJ Healthcare University / CDH NEXUS Clinical OmniSuite login screen."""
     _, mid, _ = st.columns([1, 1.1, 1])
     with mid:
         with st.container(border=True):
@@ -1040,8 +1040,8 @@ def render_login_page():
             st.markdown(
                 f"""<div class='login-logo-row'>{logo_html}</div>
                 <div class='login-org-name'>KPJ Healthcare University</div>
-                <div class='login-app-title'>CDH Synapse</div>
-                <div class='login-app-subtitle'>Executive Workforce Intelligence Platform</div>
+                <div class='login-app-title'>CDH NEXUS Clinical OmniSuite</div>
+                <div class='login-app-subtitle'>AI-Enabled Integrated Digital Health Portal for Academics, Researchers, & Clinicians</div>
                 {error_html}""",
                 unsafe_allow_html=True
             )
@@ -2829,7 +2829,7 @@ def show():
             "Specialist Search"
         ], label_visibility="collapsed")
         st.markdown("---")
-        st.markdown("<div style='font-size:0.8em; color:#8C7C68;'>CDH Synapse v2.6<br>Restricted to Authorised Personnel</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:0.8em; color:#8C7C68;'>CDH NEXUS Clinical OmniSuite v2.6<br>Restricted to Authorised Personnel</div>", unsafe_allow_html=True)
         
         # Temporarily disabled with Workforce Intelligence Overview navigation.
         # if page == "Workforce Intelligence Overview":
@@ -2851,7 +2851,7 @@ def show():
 
     # Global application header.
     logo_header_html = f'<img src="data:image/png;base64,{LOGO_IMG_B64}" class="kpj-logo">' if LOGO_IMG_B64 else ""
-    st.markdown(f"""<div class="kpj-header-bar">{logo_header_html}<div class="kpj-header-text-block"><div class="kpj-header-title">CDH Synapse</div><div class="kpj-header-subtitle">Executive Workforce Intelligence Platform</div></div></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="kpj-header-bar">{logo_header_html}<div class="kpj-header-text-block"><div class="kpj-header-title">CDH NEXUS Clinical OmniSuite</div><div class="kpj-header-subtitle">AI-Enabled Integrated Digital Health Portal for Academics, Researchers, & Clinicians</div></div></div>""", unsafe_allow_html=True)
 
     # Shared content container.
     with st.container():
