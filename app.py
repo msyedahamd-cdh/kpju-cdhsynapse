@@ -11,7 +11,7 @@ import re
 import io
 import os
 
-# Optional fuzzy matching support
+# fuzzy matching support
 try:
     from rapidfuzz import fuzz
     _HAS_RAPIDFUZZ = True
@@ -2791,7 +2791,7 @@ def render_research_programmes_table(df):
         st.dataframe(styled_table, use_container_width=True, hide_index=True, height=_research_table_height(len(table_df)))
 
 def render_research_placeholder():
-    st.markdown(f"<div class='page-title'>CDH AI Academy AI & Digital Health Training Porgrammes 2026</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='page-title'>CDH AI Academy AI & Digital Health Training Programmes 2026</div>", unsafe_allow_html=True)
     df = get_research_programmes_data()
     if df.empty:
         st.markdown(
