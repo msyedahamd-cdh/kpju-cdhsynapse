@@ -2429,7 +2429,7 @@ def render_digital_health_projects():
         with button_col:
             st.markdown("<span id='dhp-insight-btn-anchor'></span>", unsafe_allow_html=True)
             st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
-            generate_clicked = st.button("Generate Portfolio Insight", key="dhp_generate_insight", use_container_width=True)
+            generate_clicked = st.button("✨ Generate Portfolio Insight", key="dhp_generate_insight", use_container_width=True)
 
         timeline_df = df_filtered.sort_values('Start_Date', ascending=True).copy()
         timeline_df['Duration_Days'] = (timeline_df['End_Date'] - timeline_df['Start_Date']).dt.days
@@ -2829,7 +2829,7 @@ def show():
             "CDH TalentScope©"
         ], label_visibility="collapsed")
         st.markdown("---")
-        st.markdown("<div style='font-size:0.8em; color:#8C7C68;'>CDH NEXUS Clinical OmniSuite v2.6<br>Restricted to Authorised Personnel</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:0.8em; color:#8C7C68;'>CDH NEXUS Clinical OmniSuite v1.0<br>Restricted to Authorised Personnel</div>", unsafe_allow_html=True)
         
         # Temporarily disabled with Workforce Intelligence Overview navigation.
         # if page == "Workforce Intelligence Overview":
