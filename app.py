@@ -2863,7 +2863,7 @@ def show():
             render_digital_health_projects()
             return
 
-        if page == "CDH AI Academy AI & Digital Health Training Porgrammes 2026":
+        if page == "CDH AI Academy AI & Digital Health Training Programmes 2026":
             render_research_placeholder()
             return
 
@@ -2881,5 +2881,6 @@ def show():
 
 if __name__ == "__main__":
     show()
+
 
 
