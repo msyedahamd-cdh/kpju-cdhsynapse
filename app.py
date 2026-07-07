@@ -946,7 +946,7 @@ def inject_custom_css():
 
         /* Filter / search bar shell - same card treatment as the Digital
            Health Projects timeline card, used to wrap the existing search
-           box and buttons on Specialist Search as one clean search section. */
+           box and buttons on CDH TalentScope© as one clean search section. */
         .exec-filter-bar {{
             background: {COLOR_CARD};
             border: 1px solid #EAE6E1;
@@ -1145,7 +1145,7 @@ def load_data():
             f"""<div class="ai-box"><div class="ai-title">Dataset Not Found</div>
             <div style="color:{COLOR_TEXT}; line-height:1.7; font-size:0.95rem;">
             Could not find or read <b>{DATA_BASENAME}.csv</b> in the app folder.
-            Expected Specialist Search dataset columns include Specialist, PublishedResearch,
+            Expected CDH TalentScope© dataset columns include Specialist, PublishedResearch,
             OngoingResearch, and SpecialInterest.
             </div></div>""",
             unsafe_allow_html=True
@@ -2505,7 +2505,7 @@ def render_digital_health_projects():
     st.markdown("</div>", unsafe_allow_html=True)
 # ================= SEARCH PAGE =================
 def render_search(df):
-    st.markdown(f"<div class='page-title'>Specialist Search</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='page-title'>CDH TalentScope©</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='page-subtitle'>Career and Research Pathway Lookup</div>", unsafe_allow_html=True)
     st.markdown(
         f"<div class='dhp-exec-summary'><b>{len(df)} Specialist Profiles</b> available for keyword search across research, clinical interests, and specialist names.</div>",
@@ -2825,8 +2825,8 @@ def show():
             # "Regional Coverage Analysis",      # Temporarily disabled.
             "CDH AI and Digital Health Project Portfolio",
             "CDH Establishment Progress",
-            "CDH AI Academy AI & Digital Health Training Porgrammes 2026",
-            "Specialist Search"
+            "CDH AI Academy AI & Digital Health Training Programmes 2026",
+            "CDH TalentScope©"
         ], label_visibility="collapsed")
         st.markdown("---")
         st.markdown("<div style='font-size:0.8em; color:#8C7C68;'>CDH NEXUS Clinical OmniSuite v2.6<br>Restricted to Authorised Personnel</div>", unsafe_allow_html=True)
@@ -2874,7 +2874,7 @@ def show():
         # if page == "Workforce Intelligence Overview" and 'filter_region' in st.session_state and st.session_state['filter_region']:
         #     df = df[df["Region"] == st.session_state['filter_region']]
 
-        if page == "Specialist Search": render_search(df)
+        if page == "CDH TalentScope©": render_search(df)
         # elif page == "Workforce Intelligence Overview": render_dashboard(df)  # Temporarily disabled.
         # elif page == "Regional Coverage Analysis": render_geospatial(df)      # Temporarily disabled.
         elif page == "CDH Establishment Progress": render_project_tracker()
