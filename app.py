@@ -2429,7 +2429,7 @@ def render_digital_health_projects():
         with button_col:
             st.markdown("<span id='dhp-insight-btn-anchor'></span>", unsafe_allow_html=True)
             st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
-            generate_clicked = st.button("✨ Generate Portfolio Insight", key="dhp_generate_insight", use_container_width=True)
+            generate_clicked = st.button("Generate Portfolio Insight", key="dhp_generate_insight", use_container_width=True)
 
         timeline_df = df_filtered.sort_values('Start_Date', ascending=True).copy()
         timeline_df['Duration_Days'] = (timeline_df['End_Date'] - timeline_df['Start_Date']).dt.days
