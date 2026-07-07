@@ -2110,7 +2110,12 @@ def load_digital_health_projects_data(data_mtime=None):
         if elapsed > total_duration: return 100
         return int((elapsed / total_duration) * 100)
 
-    df['Progress'] = df.apply(calc_progress, axis=1)
+    calculated_progress = df.apply(calc_progress, axis=1)
+    if "Progress" in df.columns:
+        manual_progress = pd.to_numeric(df["Progress"], errors="coerce")
+        df["Progress"] = manual_progress.fillna(calculated_progress).clip(0, 100).astype(int)
+    else:
+        df["Progress"] = calculated_progress
     return df
 
 def get_digital_health_projects_data():
@@ -2422,22 +2427,16 @@ def render_digital_health_projects():
         with header_col:
             st.markdown(
                 f"""<div class='dhp-exec-timeline-title'>Project Portfolio Status</div>
-                <div class='dhp-exec-timeline-sub'>Each bar spans a project's planned start to end date; the solid fill shows progress to date.</div>
+                <div class='dhp-exec-timeline-sub'>Each bar shows project progress on a consistent 0-100% scale.</div>
                 <div class='dhp-exec-legend'>{legend_html}</div>""",
                 unsafe_allow_html=True
             )
         with button_col:
             st.markdown("<span id='dhp-insight-btn-anchor'></span>", unsafe_allow_html=True)
             st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
-            generate_clicked = st.button("✨ Generate Portfolio Insight", key="dhp_generate_insight", use_container_width=True)
+            generate_clicked = st.button(" Generate Portfolio Insight", key="dhp_generate_insight", use_container_width=True)
 
-        timeline_df = df_filtered.sort_values('Start_Date', ascending=True).copy()
-        timeline_df['Duration_Days'] = (timeline_df['End_Date'] - timeline_df['Start_Date']).dt.days
-        timeline_df['Progress_Date'] = timeline_df['Start_Date'] + pd.to_timedelta(
-            timeline_df['Duration_Days'] * timeline_df['Progress'] / 100, unit='D'
-        )
-        progress_days = (timeline_df['Progress_Date'] - timeline_df['Start_Date']).dt.days.clip(lower=1)
-
+        timeline_df = df_filtered.sort_values('Progress', ascending=False).copy()
         def _truncate_name(name, n=36):
             return name if len(name) <= n else name[:n - 1] + "…"
         timeline_df['Label'] = timeline_df['ProjectName'].apply(_truncate_name)
@@ -2447,16 +2446,16 @@ def render_digital_health_projects():
         # Selected project naturally renders as the only row.
 
         fig = go.Figure()
-        # Faded track: full planned Start -> End span
+        # Faded track: full 100% progress span
         fig.add_trace(go.Bar(
-            y=timeline_df['Label'], x=timeline_df['Duration_Days'], base=timeline_df['Start_Date'],
+            y=timeline_df['Label'], x=[100] * len(timeline_df), base=0,
             orientation='h',
             marker=dict(color=bar_colors, opacity=0.22, line=dict(width=0)),
             hoverinfo='skip', showlegend=False,
         ))
-        # Solid fill: Start -> progress-to-date
+        # Solid fill: progress percentage
         fig.add_trace(go.Bar(
-            y=timeline_df['Label'], x=progress_days, base=timeline_df['Start_Date'],
+            y=timeline_df['Label'], x=timeline_df['Progress'], base=0,
             orientation='h',
             marker=dict(color=bar_colors, line=dict(width=0)),
             customdata=timeline_df[['ProjectName', 'Category', 'Status', 'Collaborating Organisation', 'Progress', 'Start_Date', 'End_Date']],
@@ -2476,7 +2475,7 @@ def render_digital_health_projects():
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
             height=max(380, min(580, 44 + len(timeline_df) * 36)),
             margin=dict(t=10, b=6, l=4, r=10),
-            xaxis=dict(showgrid=True, gridcolor='#EEEAE3', tickfont=dict(size=11, color=COLOR_TEXT)),
+            xaxis=dict(range=[0, 100], ticksuffix='%', showgrid=True, gridcolor='#EEEAE3', tickfont=dict(size=11, color=COLOR_TEXT)),
             yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=12, color=COLOR_TEXT)),
             hoverlabel=dict(bgcolor="white", font_size=12, font_color=COLOR_TEXT, bordercolor="#EAE6E1"),
         )
